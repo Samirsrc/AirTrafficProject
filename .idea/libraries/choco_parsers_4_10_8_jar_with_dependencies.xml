@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="choco-parsers-4.10.8-jar-with-dependencies">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../../../src/choco-parsers-4.10.8-jar-with-dependencies.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../../../../src/choco-parsers-4.10.8-jar-with-dependencies.jar!/OSGI-OPT/src" />
+    </SOURCES>
+  </library>
+</component>
