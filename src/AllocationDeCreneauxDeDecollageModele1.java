@@ -9,41 +9,26 @@ public class AllocationDeCreneauxDeDecollageModele1 {
     static boolean geodesique;
 
     public static void SolveProblem(ArrayList<Vol> vols) {
-        //nombre de dij
-        int dij_count = ((vols.size() - 1) * vols.size()) / 2;  // Par exemple si on a 4 vols, la comparaison va se faire entre les vols (1 et 2) (1 et 3) (1 et 4) (2 et 3) (2 et 4) (3 et 4) donc ça nous fait 6 dij
         //compteur pour le remplissage du tableau dij
         int dij_index = 0;
         //retard max, je l'ai limité à 120 secondes (8 instants) pour pas que le nombre de solutions soit trop grand
         int retardMax = 8;
-
-        // distance separation en NM
+        //distance separation en NM
         float distanceSeparation = 20;
+
         //modele
-        /*  CSP {
-            X = { retardi,  i ∈ [1, n] } ∪ {dij ,(i, j) ∈ [1, n] , i < j }
-            D =  [0,retardmax] ∪ [-retardmax,retardmax]
-            C = {(dij = retardj − retardi) ∧ (dij !∈ Cij), (i, j) ∈ [1, n], i < j}
-            }
-            (dij !∈ Cij) ⇔ dij =! Tki − Tlj  */
         Model model = new Model("allocation de creneaux de decollage");
+
         //variables
         //retardi,  i ∈ [1, n]
         IntVar[] retards = model.intVarArray("retard avion", vols.size(), 0, retardMax);
+        //Dij
+        IntVar[] dij = new IntVar[0];
 
 
-        //dij ,(i, j) ∈ [1, n] , i < j
-        IntVar[] dij = model.intVarArray("dij", dij_count, -retardMax, retardMax);
         //contraintes
-        //contrainte : dij = retardj − retardi
-        for (int i = 0; i <= vols.size(); i++) {
-            for (int j = i + 1; j < vols.size(); j++) {
-                dij[dij_index].eq(retards[j].sub(retards[i])).post();
-                dij_index++;
-            }
-        }
-        //contrainte : dij =! Tki − Tlj
-        dij_index = 0;
 
+        boolean dij_bool = false;
         if (geodesique == false) distanceSeparation = 5;
 
         for (int i = 0; i <= vols.size(); i++) {
@@ -52,20 +37,29 @@ public class AllocationDeCreneauxDeDecollageModele1 {
 
                 for (int k = 0; k < vols.get(i).trajectoire4D.points.size(); k++) {
 
-
                     for (int l = 0; l < vols.get(j).trajectoire4D.points.size(); l++) {
 
                         // si la distance entre les deux points < 5 mille nautique alors il a conflit donc il faut que l'instant de passage soit différent
                         if (obtenirDistance(vols.get(i).trajectoire4D.points.get(k).longitude, vols.get(i).trajectoire4D.points.get(k).latitude, vols.get(j).trajectoire4D.points.get(l).longitude, vols.get(j).trajectoire4D.points.get(l).latitude) < distanceSeparation) {
-                            System.out.println("Nous sommes en conflit : avion " + (i + 1) + " point " + (k) + " avec avion " + (j + 1) + " point " + (l));
+                            System.out.println("vol(" + i + ") point(" + k + ") (lon: " + vols.get(i).trajectoire4D.points.get(k).longitude + " | lat: " + vols.get(i).trajectoire4D.points.get(k).latitude + " | instant: " + vols.get(i).trajectoire4D.points.get(k).instantDePassage + " )   en conflit avec   vol(" + j + ") point(" + l + ") (lon: " + vols.get(j).trajectoire4D.points.get(l).longitude + " | lat: " + vols.get(j).trajectoire4D.points.get(l).latitude + " | instant: " + vols.get(j).trajectoire4D.points.get(l).instantDePassage + " )    || Tik-Tjl = " + (vols.get(i).trajectoire4D.points.get(k).instantDePassage - vols.get(j).trajectoire4D.points.get(l).instantDePassage));
 
-                            dij[dij_index].ne((vols.get(i).trajectoire4D.points.get(k).instantDePassage - vols.get(j).trajectoire4D.points.get(l).instantDePassage)).post();
+                            //creation de la variable Dij
+                            if (dij_bool == false) {
+                                dij = new IntVar[dij_index + 1];
+                                dij[dij_index] = model.intVar(("D" + i + "#" + j), -retardMax, retardMax);
+                                dij_bool = true;
+                                //contrainte dij = retard j - retard i
+                                dij[dij_index].eq(retards[j].sub(retards[i])).post();
+                                dij_index++;
+                            }
+                            //contrainte dij != Tik - Tjk
+                            dij[dij_index - 1].ne((vols.get(i).trajectoire4D.points.get(k).instantDePassage - vols.get(j).trajectoire4D.points.get(l).instantDePassage)).post();
 
                         }
                     }
                 }
+                dij_bool = false;
 
-                dij_index++;
             }
         }
 
