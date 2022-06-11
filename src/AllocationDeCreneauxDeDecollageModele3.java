@@ -1,12 +1,21 @@
 import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solution;
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.exception.ContradictionException;
+import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMiddle;
+import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
+import org.chocosolver.solver.search.strategy.selectors.variables.Smallest;
+import org.chocosolver.solver.search.strategy.selectors.variables.VariableSelectorWithTies;
 import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.util.tools.ArrayUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.chocosolver.solver.search.strategy.Search.minDomUBSearch;
 
 public class AllocationDeCreneauxDeDecollageModele3 {
     // j'utilise cette variable pour calculer les distances pour mon petit exemple dans un plan cartésien
@@ -29,27 +38,34 @@ public class AllocationDeCreneauxDeDecollageModele3 {
         //retardi,  i ∈ [1, n]
         IntVar[] retards = model.intVarArray("retard avion", vols.size(), 0, retardMax);
         //dij
-        IntVar[] dij = new IntVar[0];
+
 
         //contraintes
         dij_index = 0;
 
+ArrayList<IntVar> tmpVarArray = new ArrayList<IntVar>();
 
+        IntVar tmpDij;
         //contrainte : dij !∈ aux intervalles
         //on applique la contrainte à tout les dij
         for (Map.Entry m : lesintervallesGotten.entrySet()) {
-            dij = new IntVar[dij_index + 1];
-            dij[dij_index] = model.intVar(m.getKey().toString(), -retardMax, retardMax);
+
+          //  dij = new IntVar[dij_index + 1];
+            // dij[dij_index]
+            tmpDij   = model.intVar(m.getKey().toString(), -retardMax, retardMax);
             String splitdij[] = m.getKey().toString().split("D");
             String splitdij2[] = splitdij[1].split("#");
-            dij[dij_index].eq(retards[Integer.parseInt(splitdij2[1])].sub(retards[Integer.parseInt(splitdij2[0])])).post();
+            // dij[dij_index]
+            tmpDij.eq(retards[Integer.parseInt(splitdij2[1])].sub(retards[Integer.parseInt(splitdij2[0])])).post();
             dij_index++;
-
-
-            Constraint c = new Constraint("MyConstraint", new IntervallesPropagator(dij[dij_index - 1], lesintervallesGotten.get(m.getKey())));
+            tmpVarArray.add(tmpDij);
+            Constraint c = new Constraint("MyConstraint", new IntervallesPropagator(tmpDij, lesintervallesGotten.get(m.getKey())));
             c.post();
+        }
 
-
+        IntVar[] dij = new IntVar[tmpVarArray.size()];
+        for(int i = 0; i < tmpVarArray.size(); i++){
+            dij [i] = tmpVarArray.get(i);
         }
 
 
@@ -59,28 +75,51 @@ public class AllocationDeCreneauxDeDecollageModele3 {
             System.out.println(solver.findAllSolutions());
         }*/
 
-      // IntVar[] max = model.intVarArray("max", vols.size(),0, retardMax);
-      //  model.max
+        // IntVar[] max = model.intVarArray("max", vols.size(),0, retardMax);
+        //  model.max
 
         /*System.out.println("MAX_MIN ");
         model.max(max, clusterCapacity).post();
         model.setObjective(Model.MINIMIZE, max);*/
-      // max = model.intVar("max", alpha, beta);
+        // max = model.intVar("max", alpha, beta);
 // to maximize X
-        IntVar max = model.intVar("max",0,retardMax);
+        IntVar max = model.intVar("max", 0, retardMax);
         model.max(max, retards).post();
-        model.setObjective(Model.MINIMIZE,max);
+        model.setObjective(Model.MINIMIZE, max);
 // or model.setObjective(Model.MINIMIZE, X); to minimize X
         Solver solver = model.getSolver();
-        while(solver.solve()){
 
-            System.out.println(solver.findSolution());
-            // an improving solution has been found
-       }
-// the last solution found was optimal (if search completed)
+        solver.setSearch(Search.intVarSearch(
+                new VariableSelectorWithTies<>(
+                        new FirstFail(model),
+                        new Smallest()),
+                new IntDomainMiddle(false),
+                ArrayUtils.append(retards, dij))
+        );
 
+        //  solver.setSearch(minDomUBSearch(ArrayUtils.concat(dij, retards)));
+        solver.showShortStatistics();
+        while (solver.solve()) {
+         //   solver.showSolutions();
+            prettyPrint(model, retards, vols.size(), max);
+            solver.printStatistics();
+            System.out.println("Retard MAX = " + max.getValue());
+        }
 
     }
+
+    private static void prettyPrint(Model model, IntVar[] retards, int Vols, IntVar max) {
+        StringBuilder st = new StringBuilder();
+        st.append("Solution #").append(model.getSolver().getSolutionCount()).append("\n");
+        for (int i = 0; i < Vols; i++) {
+            st.append(String.format("\tRetard du Vol %d est = %d ", i, retards[i].getValue()));
+        }
+        st.append("\n");
+        st.append(String.format("Retard MAX est = %d ", max.getValue()));
+        st.append("\n");
+
+        System.out.println(st.toString());
+}
 
     //methode pour obtenir les intervalles
     public static HashMap<String, ArrayList<BornesLbUb>> getBornes(ArrayList<Vol> vols) {
