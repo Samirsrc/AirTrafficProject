@@ -35,14 +35,20 @@ public class IntervallesPropagator extends Propagator<IntVar> {
 
 
     public ESat isEntailed() {
-        if (removeInterval = false) {
 
-            return ESat.FALSE;
-        } else if (removeInterval = true) {
-
+        if(isCompletelyInstantiated()){
             return ESat.TRUE;
-        } else {
-
+        }else
             return ESat.UNDEFINED;
-        }
+//        if (removeInterval = false) {
+//
+//            return ESat.FALSE;
+//        } else if (removeInterval = true) {
+//
+//            return ESat.TRUE;
+//        } else {
+//
+//            return ESat.UNDEFINED;
+//        }
     }
+}
