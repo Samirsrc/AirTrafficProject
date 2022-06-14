@@ -1,7 +1,13 @@
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
+import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMiddle;
+import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
+import org.chocosolver.solver.search.strategy.selectors.variables.Smallest;
+import org.chocosolver.solver.search.strategy.selectors.variables.VariableSelectorWithTies;
 import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.util.tools.ArrayUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,9 +58,7 @@ public class AllocationDeCreneauxDeDecollageModele2 {
             if (cs.size() > 1) {
                 Constraint cand = model.and(cs.get(0), cs.get(1));
                 for (int j = 2; j < cs.size(); j++) {
-
                     cand = model.and(cand, cs.get(j));
-
                 }
                 cand.post();
             } else {
@@ -68,13 +72,51 @@ public class AllocationDeCreneauxDeDecollageModele2 {
         }
 
         //afficher toutes les solutions
-        Solver solver = model.getSolver();
+    /*    Solver solver = model.getSolver();
         while (solver.solve()) {
             System.out.println(solver.findAllSolutions());
+        }*/
+        // to maximize X
+        IntVar max = model.intVar("max", 0, retardMax);
+        model.max(max, retards).post();
+        model.setObjective(Model.MINIMIZE, max);
+// or model.setObjective(Model.MINIMIZE, X); to minimize X
+        Solver solver = model.getSolver();
+
+        solver.setSearch(Search.intVarSearch(
+                new VariableSelectorWithTies<>(
+                        new FirstFail(model),
+                        new Smallest()),
+                new IntDomainMiddle(false),
+                ArrayUtils.append(retards, dij))
+        );
+
+        //  solver.setSearch(minDomUBSearch(ArrayUtils.concat(dij, retards)));
+        solver.showShortStatistics();
+        while (solver.solve()) {
+            //   solver.showSolutions();
+            prettyPrint(model, retards, vols.size(), max);
+            solver.printStatistics();
+            System.out.println("Retard MAX = " + max.getValue());
         }
 
-
     }
+
+    private static void prettyPrint(Model model, IntVar[] retards, int Vols, IntVar max) {
+        StringBuilder st = new StringBuilder();
+        st.append("Solution #").append(model.getSolver().getSolutionCount()).append("\n");
+        for (int i = 0; i < Vols; i++) {
+            st.append(String.format("\tRetard du Vol %d est = %d ", i, retards[i].getValue()));
+        }
+        st.append("\n");
+        st.append(String.format("Retard MAX est = %d ", max.getValue()));
+        st.append("\n");
+
+        System.out.println(st.toString());
+    }
+
+
+
 
     //methode pour obtenir les intervalles
     public static HashMap<String, ArrayList<BornesLbUb>> getBornes(ArrayList<Vol> vols) {
@@ -101,8 +143,8 @@ public class AllocationDeCreneauxDeDecollageModele2 {
 
                         // si la distance entre les deux points < 5 mille nautique alors il a conflit donc il faut que l'instant de passage soit différent
                         if (obtenirDistance(vols.get(i).trajectoire4D.points.get(k).longitude, vols.get(i).trajectoire4D.points.get(k).latitude, vols.get(j).trajectoire4D.points.get(l).longitude, vols.get(j).trajectoire4D.points.get(l).latitude) < distanceSeparation) {
-
-                         System.out.println("vol("+i+") point("+k+") (lon: "+ vols.get(i).trajectoire4D.points.get(k).longitude + " | lat: "+ vols.get(i).trajectoire4D.points.get(k).latitude + " | instant: "+ vols.get(i).trajectoire4D.points.get(k).instantDePassage + " )   en conflit avec   vol("+j+") point("+l+") (lon: "+ vols.get(j).trajectoire4D.points.get(l).longitude + " | lat: "+ vols.get(j).trajectoire4D.points.get(l).latitude + " | instant: "+ vols.get(j).trajectoire4D.points.get(l).instantDePassage + " )    || Tik-Tjl = "+(vols.get(i).trajectoire4D.points.get(k).instantDePassage - vols.get(j).trajectoire4D.points.get(l).instantDePassage));
+                            System.out.println("vol(" + i + ") point(" + k + ") (lon: " + vols.get(i).trajectoire4D.points.get(k).longitude + " | lat: " + vols.get(i).trajectoire4D.points.get(k).latitude + " | instant: " + vols.get(i).trajectoire4D.points.get(k).instantDePassage + " )   \nen conflit avec   \nvol(" + j + ") point(" + l + ") (lon: " + vols.get(j).trajectoire4D.points.get(l).longitude + " | lat: " + vols.get(j).trajectoire4D.points.get(l).latitude + " | instant: " + vols.get(j).trajectoire4D.points.get(l).instantDePassage + " )     \nTik-Tjl = " + (vols.get(i).trajectoire4D.points.get(k).instantDePassage - vols.get(j).trajectoire4D.points.get(l).instantDePassage));
+                            System.out.println("-----------------------------------------------------------------------------------------");
 
 
                             if (dij_bool == false) {
