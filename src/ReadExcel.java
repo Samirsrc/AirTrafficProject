@@ -1,18 +1,20 @@
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.util.ArrayList;
-import java.util.Iterator;
+import org.apache.poi.ss.usermodel.Row;
+        import org.apache.poi.xssf.usermodel.XSSFSheet;
+        import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+        import java.io.File;
+        import java.io.FileInputStream;
+        import java.util.ArrayList;
+        import java.util.Iterator;
 
 public class ReadExcel {
     static ArrayList<Vol> vols = new ArrayList<Vol>();
 
     static public void lireTrajectoire() {
 
-        for (int n = 0; n < 1; n++) {
+        int j = 0;
+        for (int n = 0; n < 7; n++) {
 
             vols.add(new Vol(new Trajectoire4D()));
 
@@ -26,7 +28,6 @@ public class ReadExcel {
                 Iterator<Row> rowIterator = sheet.iterator();
 
                 int i = 0;
-                int j = 0;
                 while (rowIterator.hasNext()) {
 
                     Row row = rowIterator.next();
